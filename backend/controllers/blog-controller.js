@@ -25,7 +25,7 @@ export const addBlog = async (req, res, next) => {
     return console.log(error);
   }
   if (!existingUser) {
-    return res.status(400).json({ message: "Unable to find User bu this ID " });
+    return res.status(400).json({ message: "Unable to find User by this ID " });
   }
   const blog = new Blog({
     title,
@@ -34,7 +34,7 @@ export const addBlog = async (req, res, next) => {
     user,
   });
   try {
-    // await blog.save();//in 33 following started to integrate with server
+    // await blog.save();//in 30 following started to integrate with server
     const session = await mongoose.startSession();
     session.startTransaction();
     await blog.save({ session });
@@ -84,12 +84,28 @@ export const deleteBlog = async (req, res, next) => {
   const id = req.params.id;
   let blog;
   try {
-    blog = await Blog.findByIdAndRemove(id);
+    blog = await Blog.findByIdAndRemove(id).populate("user"); //updated
+    await blog.user.blogs.pull(blog); //updated for deletion
+    await blog.user.save();
   } catch (error) {
     return console.log(error);
   }
   if (!blog) {
-    return res.status(500).json({ message: "Unable to delete Blog " });
+    return res.status(500).json({ message: "Unable to delete Blog" });
   }
   return res.status(200).json({ message: "Successfully Deleted" });
+};
+
+export const getByUserId = async (req, res, next) => {
+  const userId = req.params.id;
+  let userBlogs;
+  try {
+    userBlogs = await User.findById(userId).populate("blogs");
+  } catch (error) {
+    return console.log(error);
+  }
+  if (!userBlogs) {
+    return res.status(404).json({ message: "No Blog Found" });
+  }
+  return res.status(200).json({ blogs: userBlogs });
 };
